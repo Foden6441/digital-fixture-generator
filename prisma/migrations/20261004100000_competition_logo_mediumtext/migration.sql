@@ -1,0 +1,2 @@
+ALTER TABLE `competitions`
+MODIFY COLUMN `logo` MEDIUMTEXT NULL;

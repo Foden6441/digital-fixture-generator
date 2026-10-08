@@ -1,0 +1,35 @@
+ENVIRONMENT FILE SETUP
+=======================
+
+Please create a `.env` file in the project root directory (digital-fixture-generator/.env) with the following content:
+
+# Database
+DATABASE_URL="mysql://root:password@localhost:3306/fixture_generator"
+
+# NextAuth
+NEXTAUTH_SECRET="your-secret-key-change-this-in-production"
+NEXTAUTH_URL="http://localhost:3000"
+
+IMPORTANT: 
+- Replace 'root' with your MySQL username
+- Replace 'password' with your MySQL password
+- Replace 'your-secret-key-change-this-in-production' with a secure random string
+- You can generate a secure secret with: openssl rand -base64 32
+
+MYSQL DATABASE SETUP
+====================
+
+To create the MySQL database named 'fixture_generator', run the following command in your MySQL terminal or use a tool like MySQL Workbench:
+
+mysql -u root -p
+CREATE DATABASE fixture_generator;
+EXIT;
+
+Or in one line:
+mysql -u root -p -e "CREATE DATABASE fixture_generator;"
+
+After creating the database, you can run the Prisma migrations:
+npx prisma migrate dev --name init
+
+Then seed the database with the admin user:
+npm run seed

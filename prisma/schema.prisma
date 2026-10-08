@@ -1,0 +1,181 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  password  String
+  role      UserRole @default(ADMIN)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  createdCompetitions Competition[] @relation("CreatedBy")
+  auditLogs           AuditLog[] @relation("AuditLogs")
+
+  @@map("users")
+}
+
+enum UserRole {
+  ADMIN
+  ORGANIZER
+  VIEWER
+}
+
+model Competition {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  logo        String?  @db.MediumText
+  primaryColor String  @default("#191B52") @db.VarChar(7)
+  season      String
+  startDate   DateTime
+  endDate     DateTime
+  status      CompetitionStatus @default(DRAFT)
+  format      CompetitionFormat @default(DOUBLE_ROUND_ROBIN)
+  groupSize   Int                @default(4)
+  createdBy   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  creator      User     @relation("CreatedBy", fields: [createdBy], references: [id])
+  teamMemberships CompetitionTeam[]
+  venueMemberships CompetitionVenue[]
+  fixtures     Fixture[]
+
+  @@map("competitions")
+}
+
+enum CompetitionStatus {
+  DRAFT
+  PUBLISHED
+  COMPLETED
+  CANCELLED
+}
+
+enum CompetitionFormat {
+  SINGLE_ROUND_ROBIN
+  DOUBLE_ROUND_ROBIN
+  KNOCKOUT
+  GROUP_STAGE
+}
+
+model Team {
+  id           String   @id @default(cuid())
+  name         String
+  abbreviation String?
+  logo         String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  competitions CompetitionTeam[]
+  homeVenue   Venue?      @relation("TeamHomeVenue")
+  homeFixtures Fixture[] @relation("HomeTeam")
+  awayFixtures Fixture[] @relation("AwayTeam")
+
+  @@map("teams")
+}
+
+model CompetitionTeam {
+  competitionId String
+  teamId        String
+  createdAt     DateTime @default(now())
+
+  competition Competition @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  team        Team        @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@id([competitionId, teamId])
+  @@index([teamId])
+  @@map("competition_teams")
+}
+
+model Venue {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  location  String?
+  capacity  Int?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  competitionMemberships CompetitionVenue[]
+  homeTeam                    Team?       @relation("TeamHomeVenue", fields: [homeTeamId], references: [id], onDelete: SetNull)
+  fixtures                    Fixture[]
+
+  homeTeamId String? @unique
+
+  @@map("venues")
+}
+
+model CompetitionVenue {
+  competitionId String
+  venueId        String
+  createdAt     DateTime @default(now())
+
+  competition Competition @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  venue        Venue        @relation(fields: [venueId], references: [id], onDelete: Cascade)
+
+  @@id([competitionId, venueId])
+  @@index([venueId])
+  @@map("competition_venues")
+}
+
+model Fixture {
+  id          String       @id @default(cuid())
+  competitionId String
+  homeTeamId  String
+  awayTeamId  String
+  venueId     String?
+  matchDate   DateTime?
+  kickoffTime String?
+  matchday    Int?
+  groupNumber Int?
+  status      FixtureStatus @default(SCHEDULED)
+  notes       String?
+  version     Int          @default(1)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  // Relations
+  competition Competition @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  homeTeam    Team        @relation("HomeTeam", fields: [homeTeamId], references: [id])
+  awayTeam    Team        @relation("AwayTeam", fields: [awayTeamId], references: [id])
+  venue       Venue?      @relation(fields: [venueId], references: [id])
+
+  @@unique([competitionId, homeTeamId, awayTeamId, matchday])
+  @@map("fixtures")
+}
+
+enum FixtureStatus {
+  SCHEDULED
+  POSTPONED
+  PLAYED
+  CANCELLED
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  entityType  String
+  entityId    String
+  action      String
+  changes     String?  // JSON string of changes
+  performedBy String
+  createdAt   DateTime @default(now())
+
+  // Relations
+  user User @relation("AuditLogs", fields: [performedBy], references: [id])
+
+  @@map("audit_logs")
+}

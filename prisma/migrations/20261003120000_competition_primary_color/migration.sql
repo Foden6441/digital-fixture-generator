@@ -1,0 +1,2 @@
+ALTER TABLE `competitions`
+ADD COLUMN `primaryColor` VARCHAR(7) NOT NULL DEFAULT '#191B52';
