@@ -18,6 +18,7 @@ export default async function DashboardPage() {
       _count: {
         select: {
           teamMemberships: true,
+          venueMemberships: true,
           fixtures: true
         }
       }

@@ -6,7 +6,7 @@ generator client {
 }
 
 datasource db {
-  provider = "mysql"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -36,8 +36,8 @@ model Competition {
   id          String   @id @default(cuid())
   name        String
   description String?
-  logo        String?  @db.MediumText
-  primaryColor String  @default("#191B52") @db.VarChar(7)
+  logo        String?
+  primaryColor String  @default("#191B52")
   season      String
   startDate   DateTime
   endDate     DateTime
