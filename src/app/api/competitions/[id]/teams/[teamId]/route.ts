@@ -37,7 +37,7 @@ export async function DELETE(
 
     await prisma.$transaction([
       prisma.venue.updateMany({
-        where: { competitionId: id, homeTeamId: teamId },
+        where: { homeTeamId: teamId },
         data: { homeTeamId: null }
       }),
       prisma.competitionTeam.delete({
