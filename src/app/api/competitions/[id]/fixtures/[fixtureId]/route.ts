@@ -4,8 +4,9 @@ import { prisma } from "@/lib/prisma"
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string; fixtureId: string } }
+  { params }: { params: Promise<{ id: string; fixtureId: string }> }
 ) {
+  const { id, fixtureId } = await params
   const session = await auth()
 
   if (!session) {
@@ -17,7 +18,7 @@ export async function PATCH(
     const { matchDate, kickoffTime, venueId, status, notes } = body
 
     const fixture = await prisma.fixture.update({
-      where: { id: params.fixtureId },
+      where: { id: fixtureId },
       data: {
         ...(matchDate !== undefined && { matchDate: matchDate ? new Date(matchDate) : null }),
         ...(kickoffTime !== undefined && { kickoffTime }),
@@ -32,7 +33,7 @@ export async function PATCH(
     await prisma.auditLog.create({
       data: {
         entityType: "Fixture",
-        entityId: params.fixtureId,
+        entityId: fixtureId,
         action: "UPDATE",
         changes: JSON.stringify({
           matchDate,

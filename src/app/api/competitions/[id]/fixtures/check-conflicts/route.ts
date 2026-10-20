@@ -4,8 +4,9 @@ import { prisma } from "@/lib/prisma"
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params
   const session = await auth()
 
   if (!session) {
@@ -35,7 +36,7 @@ export async function POST(
     const venueConflicts = await prisma.fixture.findMany({
       where: {
         id: { not: fixtureId },
-        competitionId: params.id,
+        competitionId: id,
         venueId,
         matchDate: new Date(matchDate),
         kickoffTime,
@@ -59,7 +60,7 @@ export async function POST(
     const teamConflicts = await prisma.fixture.findMany({
       where: {
         id: { not: fixtureId },
-        competitionId: params.id,
+        competitionId: id,
         matchDate: new Date(matchDate),
         kickoffTime,
         status: { not: "CANCELLED" },

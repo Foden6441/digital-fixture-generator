@@ -4,8 +4,9 @@ import { prisma } from "@/lib/prisma"
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string; fixtureId: string } }
+  { params }: { params: Promise<{ id: string; fixtureId: string }> }
 ) {
+  const { id, fixtureId } = await params
   const session = await auth()
 
   if (!session) {
@@ -18,7 +19,7 @@ export async function POST(
 
     // Get the original fixture
     const originalFixture = await prisma.fixture.findUnique({
-      where: { id: params.fixtureId }
+      where: { id: fixtureId }
     })
 
     if (!originalFixture) {
@@ -28,7 +29,7 @@ export async function POST(
     // Create a new fixture with the same teams but new date/time
     const newFixture = await prisma.fixture.create({
       data: {
-        competitionId: params.id,
+        competitionId: id,
         homeTeamId: originalFixture.homeTeamId,
         awayTeamId: originalFixture.awayTeamId,
         venueId: venueId || originalFixture.venueId,
@@ -47,7 +48,7 @@ export async function POST(
         entityId: newFixture.id,
         action: "RESCHEDULE",
         changes: JSON.stringify({
-          originalFixtureId: params.fixtureId,
+          originalFixtureId: fixtureId,
           newFixtureId: newFixture.id,
           matchDate,
           kickoffTime

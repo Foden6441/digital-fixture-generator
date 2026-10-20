@@ -4,8 +4,9 @@ import { prisma } from "@/lib/prisma"
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params
   const session = await auth()
 
   if (!session) {
@@ -17,7 +18,7 @@ export async function GET(
     const competitionLogs = await prisma.auditLog.findMany({
       where: {
         entityType: "Competition",
-        entityId: params.id
+        entityId: id
       },
       include: {
         user: {
@@ -31,7 +32,7 @@ export async function GET(
 
     // Get fixture IDs for this competition
     const fixtures = await prisma.fixture.findMany({
-      where: { competitionId: params.id },
+      where: { competitionId: id },
       select: { id: true }
     })
 
