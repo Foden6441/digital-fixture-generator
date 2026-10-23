@@ -3,7 +3,7 @@ import { auth } from "@/auth"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { prisma } from "@/lib/prisma"
+import { backendJSON } from "@/lib/serverApi"
 import Link from "next/link"
 
 export default async function DashboardPage() {
@@ -13,20 +13,12 @@ export default async function DashboardPage() {
     redirect("/login")
   }
 
-  const competitions = await prisma.competition.findMany({
-    include: {
-      _count: {
-        select: {
-          teamMemberships: true,
-          venueMemberships: true,
-          fixtures: true
-        }
-      }
-    },
-    orderBy: {
-      createdAt: "desc"
-    }
-  })
+  type CompetitionSummary = {
+    id: string; name: string; season: string; status: string; format: string
+    startDate: string; endDate: string
+    _count: { teamMemberships: number; venueMemberships: number; fixtures: number }
+  }
+  const competitions = await backendJSON<CompetitionSummary[]>("/api/competitions") ?? []
 
   // Get overall statistics
   const totalCompetitions = competitions.length
@@ -41,7 +33,7 @@ export default async function DashboardPage() {
           <h1 className="text-xl font-bold sm:text-2xl">Digital Fixture Generator</h1>
           <div className="flex min-w-0 items-center justify-between gap-3 sm:justify-end">
             <span className="min-w-0 break-all text-xs text-gray-600 sm:text-sm">{session.user.email}</span>
-            <Button variant="outline" render={<Link href="/api/auth/signout" />} nativeButton={false}>
+            <Button variant="outline" render={<Link href="/api/auth/logout" />} nativeButton={false}>
               Sign Out
             </Button>
           </div>

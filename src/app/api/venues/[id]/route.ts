@@ -1,29 +1,8 @@
-import { NextRequest, NextResponse } from "next/server"
-import { auth } from "@/auth"
-import { prisma } from "@/lib/prisma"
+﻿import { goProxy } from "@/lib/goProxy"
 
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const { id } = await params
-  const session = await auth()
-
-  if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
-
-  try {
-    await prisma.venue.delete({
-      where: { id }
-    })
-
-    return NextResponse.json({ success: true })
-  } catch (error) {
-    console.error("Error deleting venue:", error)
-    return NextResponse.json(
-      { error: "Failed to delete venue" },
-      { status: 500 }
-    )
-  }
-}
+export const GET = goProxy
+export const POST = goProxy
+export const PATCH = goProxy
+export const PUT = goProxy
+export const DELETE = goProxy
+export const OPTIONS = goProxy

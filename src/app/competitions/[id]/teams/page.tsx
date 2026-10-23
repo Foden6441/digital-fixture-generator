@@ -13,10 +13,17 @@ interface Team {
   id: string
   name: string
   abbreviation: string | null
+  homeVenue?: { id: string; name: string } | null
 }
 
 interface TeamOption extends Team {
   abbreviation: string | null
+}
+
+interface Venue {
+  id: string
+  name: string
+  location: string | null
 }
 
 export default function TeamsPage() {
@@ -24,6 +31,7 @@ export default function TeamsPage() {
   const params = useParams()
   const [teams, setTeams] = useState<Team[]>([])
   const [catalogueTeams, setCatalogueTeams] = useState<TeamOption[]>([])
+  const [venues, setVenues] = useState<Venue[]>([])
   const [loading, setLoading] = useState(true)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [formData, setFormData] = useState({
@@ -35,12 +43,14 @@ export default function TeamsPage() {
   useEffect(() => {
     const loadTeams = async () => {
       try {
-        const [response, catalogueResponse] = await Promise.all([
+        const [response, catalogueResponse, venuesResponse] = await Promise.all([
           fetch(`/api/competitions/${params.id}/teams`),
-          fetch("/api/teams")
+          fetch("/api/teams"),
+          fetch(`/api/competitions/${params.id}/venues`)
         ])
         if (response.ok) setTeams(await response.json())
         if (catalogueResponse.ok) setCatalogueTeams(await catalogueResponse.json())
+        if (venuesResponse.ok) setVenues(await venuesResponse.json())
       } catch (error) {
         console.error("Error fetching teams:", error)
       } finally {
@@ -108,6 +118,23 @@ export default function TeamsPage() {
     }
   }
 
+  const handleHomeVenueChange = async (teamId: string, venueId: string) => {
+    try {
+      const response = await fetch(`/api/competitions/${params.id}/teams/${teamId}/home-venue`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ venueId: venueId === "none" ? "" : venueId })
+      })
+      if (!response.ok) {
+        const result = await response.json().catch(() => ({}))
+        alert(result.error || "Could not assign this home venue")
+      }
+      await fetchTeams()
+    } catch {
+      alert("Could not update the home venue")
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white border-b">
@@ -167,6 +194,7 @@ export default function TeamsPage() {
 
       <main className="container mx-auto px-4 py-5 sm:py-8">
         <h1 className="mb-6 text-2xl font-bold sm:text-3xl">Manage Teams</h1>
+        <p className="mb-5 text-sm text-gray-600">Choose each team’s home venue before generating fixtures. Automatic scheduling will use that venue for the team’s home matches.</p>
 
         {loading ? (
           <p>Loading...</p>
@@ -187,6 +215,26 @@ export default function TeamsPage() {
                   )}
                 </CardHeader>
                 <CardContent>
+                  <div className="mb-4 space-y-2">
+                    <Label htmlFor={`home-venue-${team.id}`}>Home venue</Label>
+                    <Select
+                      value={team.homeVenue?.id ?? "none"}
+                      onValueChange={(value) => void handleHomeVenueChange(team.id, value ?? "none")}
+                      disabled={venues.length === 0}
+                    >
+                      <SelectTrigger id={`home-venue-${team.id}`} className="w-full">
+                        <SelectValue placeholder={venues.length ? "Choose a home venue" : "Add venues to this competition first"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">No home venue</SelectItem>
+                        {venues.map((venue) => (
+                          <SelectItem key={venue.id} value={venue.id}>
+                            {venue.name}{venue.location ? ` (${venue.location})` : ""}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                   <Button
                     variant="destructive"
                     size="sm"

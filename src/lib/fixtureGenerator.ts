@@ -1,4 +1,4 @@
-import { CompetitionFormat } from "@prisma/client"
+export type CompetitionFormat = "SINGLE_ROUND_ROBIN" | "DOUBLE_ROUND_ROBIN" | "KNOCKOUT" | "GROUP_STAGE"
 
 interface Team {
   id: string

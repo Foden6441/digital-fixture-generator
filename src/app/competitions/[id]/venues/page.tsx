@@ -90,7 +90,7 @@ export default function VenuesPage() {
               capacity: formData.capacity ? parseInt(formData.capacity) : null,
               homeTeamId: formData.homeTeamId || null
             }
-          : { venueId: formData.venueId })
+          : { venueId: formData.venueId, homeTeamId: formData.homeTeamId || null })
       })
 
       if (response.ok) {
@@ -101,7 +101,8 @@ export default function VenuesPage() {
           if (catalogueResponse.ok) setCatalogueVenues(await catalogueResponse.json())
         })
       } else {
-        alert("Failed to add venue")
+        const result = await response.json().catch(() => ({}))
+        alert(result.error || "Failed to add venue")
       }
     } catch (error) {
       alert("An error occurred")
@@ -146,13 +147,17 @@ export default function VenuesPage() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="venue-source">Venue</Label>
-              <Select value={formData.venueId} onValueChange={(value) => setFormData({ ...formData, venueId: value ?? "new" })}>
+              <Select value={formData.venueId} onValueChange={(value) => {
+                const venueId = value ?? "new"
+                const selectedVenue = catalogueVenues.find((venue) => venue.id === venueId)
+                setFormData({ ...formData, venueId, homeTeamId: selectedVenue?.homeTeam?.id ?? "" })
+              }}>
                 <SelectTrigger id="venue-source" className="w-full"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="new">Create a new reusable venue</SelectItem>
                   {catalogueVenues.filter((venue) => !venues.some((member) => member.id === venue.id)).map((venue) => (
                     <SelectItem key={venue.id} value={venue.id}>
-                      {venue.name}{venue.location ? ` (${venue.location})` : ""}
+                      {venue.name}{venue.location ? ` (${venue.location})` : ""}{venue.homeTeam ? ` — Home: ${venue.homeTeam.name}` : ""}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -187,16 +192,19 @@ export default function VenuesPage() {
                 onChange={(e) => setFormData({ ...formData, capacity: e.target.value })}
               />
             </div>
+            </>}
             <div className="space-y-2">
               <Label htmlFor="homeTeam">Home Team (Optional)</Label>
               <Select
-                value={formData.homeTeamId || null}
-                onValueChange={(value) => setFormData({ ...formData, homeTeamId: value ?? "" })}
+                value={formData.homeTeamId || "none"}
+                onValueChange={(value) => setFormData({ ...formData, homeTeamId: value === "none" ? "" : value ?? "" })}
+                disabled={teams.length === 0}
               >
                 <SelectTrigger id="homeTeam" className="w-full">
-                  <SelectValue placeholder="Select the team that uses this venue" />
+                  <SelectValue placeholder={teams.length ? "Select the team that uses this venue" : "Add teams to this competition first"} />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="none">No home team</SelectItem>
                   {teams.map((team) => (
                     <SelectItem key={team.id} value={team.id}>
                       {team.name}
@@ -204,8 +212,8 @@ export default function VenuesPage() {
                   ))}
                 </SelectContent>
               </Select>
+              <p className="text-xs text-gray-500">This assigns the selected venue to the team and lets automatic scheduling use it for home matches.</p>
             </div>
-            </>}
             <Button type="submit" className="w-full">Add Venue</Button>
           </form>
         </DialogContent>
@@ -214,43 +222,30 @@ export default function VenuesPage() {
       <main className="container mx-auto px-4 py-5 sm:py-8">
         <h1 className="mb-6 text-2xl font-bold sm:text-3xl">Manage Venues</h1>
 
-        {loading ? (
-          <p>Loading...</p>
-        ) : venues.length === 0 ? (
-          <Card>
-            <CardContent className="py-12 text-center">
-              <p className="text-gray-500 mb-4">No venues registered yet</p>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {venues.map((venue) => (
-              <Card key={venue.id}>
-                <CardHeader>
-                  <CardTitle className="break-words">{venue.name}</CardTitle>
-                  {venue.location && (
-                    <CardDescription>{venue.location}</CardDescription>
-                  )}
-                </CardHeader>
-                <CardContent>
-                  {venue.capacity && (
-                    <p className="text-sm text-gray-600 mb-4">Capacity: {venue.capacity}</p>
-                  )}
-                  {venue.homeTeam && (
-                    <div className="text-sm text-gray-600">Home team: {venue.homeTeam.name}</div>
-                  )}
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => handleDelete(venue.id)}
-                  >
-                    Delete
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
+        {loading ? <p>Loading...</p> : <div>
+          <section>
+            <h2 className="mb-4 text-xl font-semibold">Venues in this competition</h2>
+            {venues.length === 0 ? (
+              <Card><CardContent className="py-6 text-sm text-gray-500">No venues added to this competition yet.</CardContent></Card>
+            ) : (
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {venues.map((venue) => (
+                  <Card key={venue.id}>
+                    <CardHeader>
+                      <CardTitle className="break-words">{venue.name}</CardTitle>
+                      {venue.location && <CardDescription>{venue.location}</CardDescription>}
+                    </CardHeader>
+                    <CardContent>
+                      {venue.capacity && <p className="mb-3 text-sm text-gray-600">Capacity: {venue.capacity}</p>}
+                      {venue.homeTeam && <div className="mb-3 text-sm text-gray-600">Home team: {venue.homeTeam.name}</div>}
+                      <Button variant="destructive" size="sm" onClick={() => handleDelete(venue.id)}>Remove from competition</Button>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </section>
+        </div>}
       </main>
     </div>
   )

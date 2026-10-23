@@ -62,7 +62,8 @@ export default function VenuesPage() {
         setFormData({ name: "", location: "", capacity: "" })
         fetchVenues()
       } else {
-        alert("Failed to add venue")
+        const result = await response.json().catch(() => ({}))
+        alert(result.error || "Failed to add venue")
       }
     } catch (error) {
       alert("An error occurred")

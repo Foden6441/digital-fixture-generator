@@ -1,140 +1,69 @@
-# Digital Fixture Generator and Football Competition Management System
+# Digital Fixture Generator
 
-A web-based application designed to support the planning and management of football fixtures for Tanzanian football competitions. The platform allows authorized competition administrators to create competitions, register teams, configure venues, generate home-and-away fixtures, assign dates and times, manage postponements, publish approved fixtures, and export professional fixture documents.
+Football competition planning app with a Next.js frontend and a Go REST API. The Go service owns authentication, PostgreSQL access, fixture generation, scheduling, conflict checks, and audit history. The Next.js app forwards its `/api/*` routes to Go.
 
-## Features
+## Requirements
 
-- **Secure Authentication**: Role-based access control for competition administrators
-- **Competition Management**: Create and configure football competitions and seasons
-- **Team Registration**: Register participating teams with abbreviations and logos
-- **Venue Management**: Register and manage football stadiums and approved venues
-- **Automated Fixture Generation**: Generate league fixtures using defined scheduling rules
-- **Double Round-Robin Support**: Full support for home-and-away competitions
-- **Scheduling Interface**: Assign fixture dates, kick-off times, and venues
-- **Conflict Detection**: Automatic detection of venue, date, and team conflicts
-- **Postponement Management**: Allow authorized users to postpone and reschedule matches
-- **Audit History**: Maintain fixture versions and an audit history of important changes
-- **Document Export**: Generate printable and downloadable fixture documents (PDF, CSV)
-- **Admin Dashboard**: Comprehensive dashboards and reports for competition administrators
+- Node.js and npm for the web app
+- Go 1.23 or later for the API
+- PostgreSQL 14 or later
 
-## Tech Stack
+## Configuration
 
-- **Frontend**: Next.js 16 (React 19) with TypeScript
-- **UI Components**: shadcn/ui (built on Radix UI)
-- **Styling**: Tailwind CSS v4
-- **Database**: MySQL with Prisma ORM
-- **Authentication**: NextAuth.js v5
-- **PDF Generation**: jsPDF with autoTable
-- **Password Hashing**: bcryptjs
+Create `.env.local` in this directory:
 
-## Getting Started
-
-### Prerequisites
-
-- Node.js 18+ installed
-- MySQL database server running
-- npm or yarn package manager
-
-### Installation
-
-1. Clone the repository and navigate to the project directory:
-   ```bash
-   cd digital-fixture-generator
-   ```
-
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-
-3. Set up environment variables:
-   Create a `.env` file in the root directory with:
-   ```env
-   DATABASE_URL="mysql://root:password@localhost:3306/fixture_generator"
-   NEXTAUTH_SECRET="your-secret-key-change-this-in-production"
-   NEXTAUTH_URL="http://localhost:3000"
-   ```
-
-4. Set up the database:
-   ```bash
-   # Create a MySQL database named 'fixture_generator'
-   # Then run migrations
-   npx prisma migrate dev --name init
-
-   # Seed the database with an admin user
-   npm run seed
-   ```
-
-5. Run the development server:
-   ```bash
-   npm run dev
-   ```
-
-6. Open [http://localhost:3000](http://localhost:3000) in your browser.
-
-### Default Admin Credentials
-
-- Email: `admin@example.com`
-- Password: `admin123`
-
-**Important**: Change these credentials in production!
-
-## Usage
-
-1. **Create a Competition**: Navigate to the dashboard and click "Create Competition"
-2. **Add Teams**: Register teams that will participate in the competition
-3. **Add Venues**: Register stadiums and venues where matches will be played
-4. **Generate Fixtures**: Use the fixture generator to create match schedules
-5. **Schedule Fixtures**: Assign dates, times, and venues to each fixture
-6. **Export**: Download fixtures as PDF or CSV for distribution
-
-## Project Structure
-
-```
-digital-fixture-generator/
-├── prisma/
-│   ├── schema.prisma          # Database schema
-│   └── seed.ts                # Database seeding script
-├── src/
-│   ├── app/                   # Next.js app router
-│   │   ├── api/              # API routes
-│   │   ├── competitions/     # Competition management pages
-│   │   ├── dashboard/        # Admin dashboard
-│   │   └── login/            # Authentication page
-│   ├── components/           # React components
-│   │   └── ui/              # shadcn/ui components
-│   ├── lib/                 # Utility functions
-│   │   ├── prisma.ts        # Prisma client
-│   │   ├── fixtureGenerator.ts  # Fixture generation algorithm
-│   │   └── exportFixtures.ts    # Export functions
-│   └── types/               # TypeScript type definitions
-└── SETUP.md                 # Detailed setup instructions
+```env
+GO_API_URL=http://127.0.0.1:8080
 ```
 
-## API Documentation
+Configure the Go API environment in its process manager:
 
-See [SETUP.md](SETUP.md) for detailed API endpoint documentation.
+```env
+DATABASE_URL=postgres://user:password@localhost:5432/fixture_generator?sslmode=disable
+AUTH_SECRET=replace-with-a-long-random-secret-at-least-32-characters
+API_ADDR=:8080
+COOKIE_SECURE=false
+```
 
-## Development
+For production set `COOKIE_SECURE=true`, use HTTPS, and store secrets in your host's secret manager.
 
-### Available Scripts
+## Fresh database setup
 
-- `npm run dev` - Start development server
-- `npm run build` - Build for production
-- `npm start` - Start production server
-- `npm run lint` - Run ESLint
-- `npm run seed` - Seed database with admin user
+Create an empty PostgreSQL database, then apply the schema once:
 
-### Database Commands
+```bash
+psql "$DATABASE_URL" -f backend/migrations/001_schema.sql
+```
 
-- `npx prisma migrate dev` - Create and run migrations
-- `npx prisma migrate reset` - Reset database and re-run migrations
-- `npx prisma studio` - Open Prisma Studio for database management
+Set `DATABASE_URL`, `AUTH_SECRET`, `ADMIN_EMAIL`, `ADMIN_NAME`, and `ADMIN_PASSWORD` in the Go process environment. Choose a unique administrator password of at least 12 characters. From `backend/`, seed the administrator:
 
-## License
+```bash
+go run . seed-admin
+```
 
-This project is proprietary software for Tanzanian football competition management.
+## Run locally
 
-## Support
+In one terminal, from `backend/`:
 
-For support and questions, please refer to the project documentation or contact the development team.
+```bash
+go mod download
+go run .
+```
+
+In another terminal, from the project root:
+
+```bash
+npm install
+npm run dev
+```
+
+Open <http://localhost:3000>. The Go health endpoint is <http://localhost:8080/health>.
+
+## Backend layout
+
+- `backend/main.go` starts the Go HTTP service and PostgreSQL pool.
+- `backend/server.go` implements signed, HttpOnly cookie sessions.
+- `backend/api.go` handles competitions, reusable teams and venues, memberships, and audit history.
+- `backend/fixtures.go` handles fixture generation, edits, conflicts, postponement/rescheduling, and automatic scheduling.
+- `backend/migrations/001_schema.sql` creates the schema for a fresh database.
+- `src/lib/goProxy.ts` forwards Next.js API requests to Go.

@@ -1,6 +1,6 @@
 import { notFound, redirect } from "next/navigation"
 import { auth } from "@/auth"
-import { prisma } from "@/lib/prisma"
+import { backendJSON } from "@/lib/serverApi"
 import CompetitionSidebar from "./competition-sidebar"
 
 export default async function CompetitionLayout({
@@ -15,21 +15,7 @@ export default async function CompetitionLayout({
 
   if (!session) redirect("/login")
 
-  const competition = await prisma.competition.findUnique({
-    where: { id },
-    select: {
-      id: true,
-      name: true,
-      season: true,
-      _count: {
-        select: {
-          teamMemberships: true,
-          venueMemberships: true,
-          fixtures: true
-        }
-      }
-    }
-  })
+  const competition = await backendJSON<{ id: string; name: string; season: string; _count: { teamMemberships: number; venueMemberships: number; fixtures: number } }>(`/api/competitions/${id}`)
 
   if (!competition) notFound()
 

@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation"
 import { auth } from "@/auth"
-import { prisma } from "@/lib/prisma"
+import { backendJSON } from "@/lib/serverApi"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -21,24 +21,22 @@ export default async function CompetitionDetailPage({
     redirect("/login")
   }
 
-  const competition = await prisma.competition.findUnique({
-    where: { id },
-    include: {
-      teamMemberships: { include: { team: true } },
-      venueMemberships: { include: { venue: { include: { homeTeam: true } } } },
-      fixtures: {
-        include: {
-          homeTeam: true,
-          awayTeam: true,
-          venue: true
-        },
-        orderBy: [
-          { matchday: "asc" },
-          { matchDate: "asc" }
-        ]
-      }
-    }
-  })
+  const [competitionData, teamsData, venuesData, fixturesData] = await Promise.all([
+    backendJSON<Record<string, any>>(`/api/competitions/${id}`),
+    backendJSON<Array<Record<string, any>>>(`/api/competitions/${id}/teams`),
+    backendJSON<Array<Record<string, any>>>(`/api/competitions/${id}/venues`),
+    backendJSON<Array<Record<string, any>>>(`/api/competitions/${id}/fixtures`),
+  ])
+  const competition: (Record<string, any> & {
+    teamMemberships: Array<{ team: Record<string, any> }>
+    venueMemberships: Array<{ venue: Record<string, any> }>
+    fixtures: Array<Record<string, any>>
+  }) | null = competitionData ? {
+    ...competitionData,
+    teamMemberships: (teamsData ?? []).map((team) => ({ team })),
+    venueMemberships: (venuesData ?? []).map((venue) => ({ venue })),
+    fixtures: fixturesData ?? [],
+  } : null
 
   if (!competition) {
     return <div>Competition not found</div>
@@ -55,8 +53,8 @@ export default async function CompetitionDetailPage({
     primaryColor: competition.primaryColor,
     groupSize: competition.groupSize,
     season: competition.season,
-    startDate: competition.startDate.toISOString(),
-    endDate: competition.endDate.toISOString(),
+    startDate: new Date(competition.startDate).toISOString(),
+    endDate: new Date(competition.endDate).toISOString(),
     format: competition.format
   }
   const fixturesForExport = competition.fixtures.map((fixture) => ({
@@ -65,7 +63,7 @@ export default async function CompetitionDetailPage({
     homeTeam: { name: fixture.homeTeam.name },
     awayTeam: { name: fixture.awayTeam.name },
     venue: fixture.venue ? { name: fixture.venue.name } : null,
-    matchDate: fixture.matchDate?.toISOString() ?? null,
+    matchDate: fixture.matchDate ? new Date(fixture.matchDate).toISOString() : null,
     kickoffTime: fixture.kickoffTime,
     status: fixture.status
   }))
